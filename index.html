@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+        }
+
+        .navbar {
+            background-color: #2c3e50;
+            padding: 1rem;
+            color: white;
+        }
+
+        .navbar h1 {
+            margin-bottom: 1rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-links button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+        }
+
+        .nav-links button:hover {
+            background-color: #34495e;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .page {
+            display: none;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .book-list, .member-list {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .book-card, .member-card {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .search-bar {
+            margin-bottom: 1rem;
+        }
+
+        .status-available {
+            color: green;
+        }
+
+        .status-borrowed {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>Library Management System</h1>
+        <div class="nav-links">
+            <button onclick="showPage('books')">Books</button>
+            <button onclick="showPage('members')">Members</button>
+            <button onclick="showPage('transactions')">Transactions</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Books Page -->
+        <div id="books" class="page active">
+            <h2>Books Management</h2>
+            <div class="search-bar">
+                <input type="text" id="bookSearch" placeholder="Search books..." onkeyup="searchBooks()">
+            </div>
+            <div class="form-group">
+                <h3>Add New Book</h3>
+                <input type="text" id="bookTitle" placeholder="Book Title">
+                <input type="text" id="bookAuthor" placeholder="Author">
+                <input type="text" id="bookISBN" placeholder="ISBN">
+                <select id="bookStatus">
+                    <option value="available">Available</option>
+                    <option value="borrowed">Borrowed</option>
+                </select>
+                <button onclick="addBook()">Add Book</button>
+            </div>
+            <div id="bookList" class="book-list"></div>
+        </div>
+
+        <!-- Members Page -->
+        <div id="members" class="page">
+            <h2>Members Management</h2>
+            <div class="search-bar">
+                <input type="text" id="memberSearch" placeholder="Search members..." onkeyup="searchMembers()">
+            </div>
+            <div class="form-group">
+                <h3>Add New Member</h3>
+                <input type="text" id="memberName" placeholder="Member Name">
+                <input type="email" id="memberEmail" placeholder="Email">
+                <input type="tel" id="memberPhone" placeholder="Phone">
+                <button onclick="addMember()">Add Member</button>
+            </div>
+            <div id="memberList" class="member-list"></div>
+        </div>
+
+        <!-- Transactions Page -->
+        <div id="transactions" class="page">
+            <h2>Transactions</h2>
+            <div class="form-group">
+                <h3>New Transaction</h3>
+                <select id="transactionType">
+                    <option value="borrow">Borrow</option>
+                    <option value="return">Return</option>
+                </select>
+                <select id="transactionBook"></select>
+                <select id="transactionMember"></select>
+                <button onclick="createTransaction()">Create Transaction</button>
+            </div>
+            <div id="transactionList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Data storage
+        let books = [];
+        let members = [];
+        let transactions = [];
+
+        // Page navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        // Books functionality
+        function addBook() {
+            const title = document.getElementById('bookTitle').value;
+            const author = document.getElementById('bookAuthor').value;
+            const isbn = document.getElementById('bookISBN').value;
+            const status = document.getElementById('bookStatus').value;
+
+            if (title && author && isbn) {
+                const book = {
+                    id: Date.now(),
+                    title,
+                    author,
+                    isbn,
+                    status
+                };
+                books.push(book);
+                updateBookList();
+                updateTransactionBookList();
+                clearBookForm();
+            }
+        }
+
+        function updateBookList() {
+            const bookList = document.getElementById('bookList');
+            bookList.innerHTML = '';
+            books.forEach(book => {
+                const bookCard = document.createElement('div');
+                bookCard.className = 'book-card';
+                bookCard.innerHTML = `
+                    <h3>${book.title}</h3>
+                    <p>Author: ${book.author}</p>
+                    <p>ISBN: ${book.isbn}</p>
+                    <p>Status: <span class="status-${book.status}">${book.status}</span></p>
+                    <button onclick="deleteBook(${book.id})">Delete</button>
+                `;
+                bookList.appendChild(bookCard);
+            });
+        }
+
+        function clearBookForm() {
+            document.getElementById('bookTitle').value = '';
+            document.getElementById('bookAuthor').value = '';
+            document.getElementById('bookISBN').value = '';
+            document.getElementById('bookStatus').value = 'available';
+        }
+
+        function deleteBook(id) {
+            books = books.filter(book => book.id !== id);
+            updateBookList();
+            updateTransactionBookList();
+        }
+
+        function searchBooks() {
+            const searchTerm = document.getElementById('bookSearch').value.toLowerCase();
+            const filteredBooks = books.filter(book => 
+                book.title.toLowerCase().includes(searchTerm) ||
+                book.author.toLowerCase().includes(searchTerm) ||
+                book.isbn.toLowerCase().includes(searchTerm)
+            );
+            
+            const bookList = document.getElementById('bookList');
+            bookList.innerHTML = '';
+            filteredBooks.forEach(book => {
+                const bookCard = document.createElement('div');
+                bookCard.className = 'book-card';
+                bookCard.innerHTML = `
+                    <h3>${book.title}</h3>
+                    <p>Author: ${book.author}</p>
+                    <p>ISBN: ${book.isbn}</p>
+                    <p>Status: <span class="status-${book.status}">${book.status}</span></p>
+                    <button onclick="deleteBook(${book.id})">Delete</button>
+                `;
+                bookList.appendChild(bookCard);
+            });
+        }
+
+        // Members functionality
+        function addMember() {
+            const name = document.getElementById('memberName').value;
+            const email = document.getElementById('memberEmail').value;
+            const phone = document.getElementById('memberPhone').value;
+
+            if (name && email && phone) {
+                const member = {
+                    id: Date.now(),
+                    name,
+                    email,
+                    phone
+                };
+                members.push(member);
+                updateMemberList();
+                updateTransactionMemberList();
+                clearMemberForm();
+            }
+        }
+
+        function updateMemberList() {
+            const memberList = document.getElementById('memberList');
+            memberList.innerHTML = '';
+            members.forEach(member => {
+                const memberCard = document.createElement('div');
+                memberCard.className = 'member-card';
+                memberCard.innerHTML = `
+                    <h3>${member.name}</h3>
+                    <p>Email: ${member.email}</p>
+                    <p>Phone: ${member.phone}</p>
+                    <button onclick="deleteMember(${member.id})">Delete</button>
+                `;
+                memberList.appendChild(memberCard);
+            });
+        }
+
+        function clearMemberForm() {
+            document.getElementById('memberName').value = '';
+            document.getElementById('memberEmail').value = '';
+            document.getElementById('memberPhone').value = '';
+        }
+
+        function deleteMember(id) {
+            members = members.filter(member => member.id !== id);
+            updateMemberList();
+            updateTransactionMemberList();
+        }
+
+        function searchMembers() {
+            const searchTerm = document.getElementById('memberSearch').value.toLowerCase();
+            const filteredMembers = members.filter(member => 
+                member.name.toLowerCase().includes(searchTerm) ||
+                member.email.toLowerCase().includes(searchTerm) ||
+                member.phone.toLowerCase().includes(searchTerm)
+            );
+            
+            const memberList = document.getElementById('memberList');
+            memberList.innerHTML = '';
+            filteredMembers.forEach(member => {
+                const memberCard = document.createElement('div');
+                memberCard.className = 'member-card';
+                memberCard.innerHTML = `
+                    <h3>${member.name}</h3>
+                    <p>Email: ${member.email}</p>
+                    <p>Phone: ${member.phone}</p>
+                    <button onclick="deleteMember(${member.id})">Delete</button>
+                `;
+                memberList.appendChild(memberCard);
+            });
+        }
+
+        // Transactions functionality
+        function updateTransactionBookList() {
+            const transactionBook = document.getElementById('transactionBook');
+            transactionBook.innerHTML = '<option value="">Select Book</option>';
+            books.forEach(book => {
+                transactionBook.innerHTML += `<option value="${book.id}">${book.title}</option>`;
+            });
+        }
+
+        function updateTransactionMemberList() {
+            const transactionMember = document.getElementById('transactionMember');
+            transactionMember.innerHTML = '<option value="">Select Member</option>';
+            members.forEach(member => {
+                transactionMember.innerHTML += `<option value="${member.id}">${member.name}</option>`;
+            });
+        }
+
+        function createTransaction() {
+            const type = document.getElementById('transactionType').value;
+            const bookId = document.getElementById('transactionBook').value;
+            const memberId = document.getElementById('transactionMember').value;
+
+            if (bookId && memberId) {
+                const transaction = {
+                    id: Date.now(),
+                    type,
+                    bookId,
+                    memberId,
+                    date: new Date().toLocaleDateString()
+                };
+                transactions.push(transaction);
+                
+                // Update book status
+                const book = books.find(b => b.id === parseInt(bookId));
+                if (book) {
+                    book.status = type === 'borrow' ? 'borrowed' : 'available';
+                }
+                
+                updateTransactionList();
+                updateBookList();
+            }
+        }
+
+        function updateTransactionList() {
+            const transactionList = document.getElementById('transactionList');
+            transactionList.innerHTML = '';
+            transactions.forEach(transaction => {
+                const book = books.find(b => b.id === parseInt(transaction.bookId));
+                const member = members.find(m => m.id === parseInt(transaction.memberId));
+                
+                const transactionCard = document.createElement('div');
+                transactionCard.className = 'book-card';
+                transactionCard.innerHTML = `
+                    <h3>${transaction.type.toUpperCase()}</h3>
+                    <p>Book: ${book ? book.title : 'Unknown'}</p>
+                    <p>Member: ${member ? member.name : 'Unknown'}</p>
+                    <p>Date: ${transaction.date}</p>
+                `;
+                transactionList.appendChild(transactionCard);
+            });
+        }
+
+        // Initialize page
+        updateTransactionBookList();
+        updateTransactionMemberList();
+    </script>
+</body>
+</html>
